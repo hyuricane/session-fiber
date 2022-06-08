@@ -61,7 +61,7 @@ redisclient := redis.NewClient(&redis.Options{
 })
 
 sessionMiddleware := session.New(session.Config{
-	KeyLookup:    "cookie:connect_sid",
+	KeyLookup:    "cookie:session_id",
 	SignKey: func(key string) (signed string) {
 		return url.QueryEscape("s:" + cookie.Sign(key, sessionSecret))
 	},
@@ -129,6 +129,7 @@ You can use any storage from our [storage](https://github.com/gofiber/storage/) 
 ```go
 storage := sqlite3.New() // From github.com/gofiber/storage/sqlite3
 store := session.New(session.Config{
+	...
 	Storage: storage,
 })
 ```
@@ -145,7 +146,6 @@ type Config struct {
 	Expiration time.Duration
 
 	// Storage interface to store the session data
-	// Optional. Default value memory.New()
 	Storage fiber.Storage
 
 	// KeyLookup is a string in the form of "<source>:<name>" that is used
@@ -154,35 +154,41 @@ type Config struct {
 	// Optional. Default value "cookie:session_id".
 	KeyLookup string
 
-	// Domain of the cookie.
+	// Domain of the CSRF cookie.
 	// Optional. Default value "".
 	CookieDomain string
 
-	// Path of the cookie.
+	// Path of the CSRF cookie.
 	// Optional. Default value "".
 	CookiePath string
 
-	// Indicates if cookie is secure.
+	// Indicates if CSRF cookie is secure.
 	// Optional. Default value false.
 	CookieSecure bool
 
-	// Indicates if cookie is HTTP only.
+	// Indicates if CSRF cookie is HTTP only.
 	// Optional. Default value false.
 	CookieHTTPOnly bool
 
-	// Sets the cookie SameSite attribute.
+	// Value of SameSite cookie.
 	// Optional. Default value "Lax".
 	CookieSameSite string
 
 	// KeyGenerator generates the session key.
-	// Optional. Default value utils.UUID
+	// Optional. Default value utils.UUIDv4
 	KeyGenerator func() string
+
+	// return signed session id for cookie
+	SignKey func(key string) (signed string)
+
+	// return unsigned session id from cookie
+	UnsignKey func(signed string) (key string, valid bool)
 
 	// Deprecated, please use KeyLookup
 	CookieName string
 
 	// Source defines where to obtain the session id
-	source      Source
+	source Source
 
 	// The session name
 	sessionName string
@@ -195,6 +201,8 @@ type Config struct {
 var ConfigDefault = Config{
 	Expiration:   24 * time.Hour,
 	KeyLookup:    "cookie:session_id",
-	KeyGenerator: utils.UUID,
+	KeyGenerator: utils.UUIDv4,
+	source:       "cookie",
+	sessionName:  "session_id",
 }
 ```

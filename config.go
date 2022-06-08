@@ -16,7 +16,6 @@ type Config struct {
 	Expiration time.Duration
 
 	// Storage interface to store the session data
-	// Optional. Default value memory.New()
 	Storage fiber.Storage
 
 	// KeyLookup is a string in the form of "<source>:<name>" that is used
@@ -49,8 +48,10 @@ type Config struct {
 	// Optional. Default value utils.UUIDv4
 	KeyGenerator func() string
 
+	// return signed session id for cookie
 	SignKey func(key string) (signed string)
 
+	// return unsigned session id from cookie
 	UnsignKey func(signed string) (key string, valid bool)
 
 	// Deprecated, please use KeyLookup
