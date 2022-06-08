@@ -2,8 +2,6 @@
 
 Session middleware for [Fiber](https://github.com/gofiber/fiber).
 
-_NOTE: This middleware uses our [Storage](https://github.com/gofiber/storage) package to support various databases through a single interface. The default configuration for this middleware saves data to memory, see the examples below for other databases._
-
 ## Table of Contents
 
 - [Session](#session)
@@ -42,7 +40,8 @@ Import the middleware package that is part of the Fiber web framework
 ```go
 import (
   "github.com/gofiber/fiber/v2"
-  "github.com/gofiber/fiber/v2/middleware/session"
+	redisstore "github.com/hyuricane/redisstore-fiber"
+	session "github.com/hyuricane/session-fiber"
 )
 ```
 
@@ -54,7 +53,38 @@ Then create a Fiber app with `app := fiber.New()`.
 // This stores all of your app's sessions
 // Default middleware config
 store := session.New()
+sessionSecret := "session-secret"
+redisclient := redis.NewClient(&redis.Options{
+	Addr:     "localhost:6379",
+	Password: "",
+	DB:       0,
+})
 
+sessionMiddleware := session.New(session.Config{
+	KeyLookup:    "cookie:connect_sid",
+	SignKey: func(key string) (signed string) {
+		return url.QueryEscape("s:" + cookie.Sign(key, sessionSecret))
+	},
+	UnsignKey: func(signed string) (key string, ok bool) {
+		if len(signed) == 0 {
+			return
+		}
+		unsigned := utils.CopyString(signed)
+		if unsigned, err := url.QueryUnescape(unsigned); err == nil {
+			if len(unsigned) >= 2 && unsigned[0:2] == "s:" {
+				unsigned = unsigned[2:]
+				if unsigned, err := cookie.Unsign(unsigned, sessionSecret); err == nil {
+					return unsigned, true
+				}
+			}
+		}
+		return
+	},
+	Expiration: time.Hour * 24 * 7,
+	Storage: redisstore.New(redisstore.Config{
+		Client: redisclient,
+	}),
+})
 // This panic will be catch by the middleware
 app.Get("/", func(c *fiber.Ctx) error {
 	// Get session from storage
