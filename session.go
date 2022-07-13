@@ -223,9 +223,11 @@ func (s *Session) delSession() {
 	if s.config.source == SourceHeader {
 		s.ctx.Request().Header.Del(s.config.sessionName)
 		s.ctx.Response().Header.Del(s.config.sessionName)
-	} else {
-		s.ctx.Request().Header.DelCookie(s.config.sessionName)
-		s.ctx.Response().Header.DelCookie(s.config.sessionName)
+	} else if s.ctx != nil {
+		if s.ctx != nil {
+			s.ctx.Request().Header.DelCookie(s.config.sessionName)
+			s.ctx.Response().Header.DelCookie(s.config.sessionName)
+		}
 
 		fcookie := fasthttp.AcquireCookie()
 		fcookie.SetKey(s.config.sessionName)
